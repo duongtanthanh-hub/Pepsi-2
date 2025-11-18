@@ -30,11 +30,9 @@
 </script>
 <!-- Add Babel Standalone for in-browser JSX/TSX transpilation -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<!-- Safety polyfill -->
+<!-- Safety polyfill with Hardcoded API Key -->
 <script>
-  if (typeof process === 'undefined') {
-    window.process = { env: { API_KEY: '' } };
-  }
+  window.process = { env: { API_KEY: 'AIzaSyBt-V_4mRTkMJJWeThwpZQCSmJP4bMb1io' } };
 </script>
 </head>
   <body class="bg-gray-100">
@@ -49,9 +47,7 @@
       // --- ICONS ---
       const PepsiLogoIcon = (props) => (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" {...props}>
-           {/* Removed explicit logo paths as requested, using a simple placeholder or keeping it minimal/hidden if implied, 
-               but since the user asked to remove it from the UI, we will just return null or a festive icon if needed.
-               However, code reuse might expect the component to exist. I will make it a festive star/sunburst instead. */}
+           {/* Festive placeholder icon */}
            <circle cx="128" cy="128" r="120" fill="#fbbf24" /> 
            <path fill="#b45309" d="M128 36L156 108L232 108L172 154L194 228L128 184L62 228L84 154L24 108L100 108L128 36Z" />
         </svg>
