@@ -7,13 +7,15 @@
     <title>Pepsi Golden Tet Moment Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Custom font for a more festive feel */
       @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@400;500;700&display=swap');
       body {
         font-family: 'Roboto', sans-serif;
       }
       .font-pacifico {
         font-family: 'Pacifico', cursive;
+      }
+      .text-shadow {
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
       }
     </style>
   <script type="importmap">
@@ -26,7 +28,9 @@
   }
 }
 </script>
-<!-- Safety polyfill to prevent ReferenceError if process is not defined in this environment -->
+<!-- Add Babel Standalone for in-browser JSX/TSX transpilation -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Safety polyfill -->
 <script>
   if (typeof process === 'undefined') {
     window.process = { env: { API_KEY: '' } };
@@ -35,6 +39,415 @@
 </head>
   <body class="bg-gray-100">
     <div id="root"></div>
-    <script type="module" src="./index.js"></script>
+    
+    <!-- ALL APP CODE INLINED BELOW -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript">
+      import React, { useState, useCallback, useRef } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import { GoogleGenAI, Modality } from "@google/genai";
+
+      // --- ICONS ---
+      const PepsiLogoIcon = (props) => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" {...props}>
+           {/* Removed explicit logo paths as requested, using a simple placeholder or keeping it minimal/hidden if implied, 
+               but since the user asked to remove it from the UI, we will just return null or a festive icon if needed.
+               However, code reuse might expect the component to exist. I will make it a festive star/sunburst instead. */}
+           <circle cx="128" cy="128" r="120" fill="#fbbf24" /> 
+           <path fill="#b45309" d="M128 36L156 108L232 108L172 154L194 228L128 184L62 228L84 154L24 108L100 108L128 36Z" />
+        </svg>
+      );
+
+      const UploadIcon = (props) => (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        </svg>
+      );
+
+      const DownloadIcon = (props) => (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+      );
+
+      const RedoIcon = (props) => (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 11.664 0l3.18-3.185m-3.181-4.991-3.182-3.182a8.25 8.25 0 0 0-11.664 0l-3.18 3.185" />
+        </svg>
+      );
+
+      const BackIcon = (props) => (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+           <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+        </svg>
+      );
+
+      // --- CONSTANTS & PROMPTS ---
+      const createFinalPrompt = (theme) => {
+        return `Generate a realistic, real-life style photograph of the two people (parent and child) from the provided image.
+      **CRITICAL PRIORITY: Preserve the exact facial features and identities of the subjects. Their faces MUST remain clearly visible, well-lit, and unobstructed. Do not cover faces with masks, shadows, or heavy effects.**
+      The scene's theme is: "${theme}".
+      The overall mood should be happy, warm, and celebratory, fitting for the Vietnamese Tet holiday.
+      The style must be photorealistic, as if taken with a modern camera.
+      **MANDATORY REQUIREMENT: You MUST include a Pepsi can or bottle in the scene. It should be clearly visible, naturally placed (e.g., on a table or being held), and look like a natural part of the celebration.**
+      Do not add any text overlays, watermarks, or logos to the image itself.
+      The output image must have the same number of people as the input image (two people: one parent, one child).
+      Ensure the final image is high quality and resolution.`;
+      };
+
+      const LUCKY_LETTERS = [
+        { value: 'T', label: 'T - Thêm nữa đi con', description: 'A cozy family meal', textOverlay: 'Thêm nữa đi con', getPrompt: () => createFinalPrompt("A cozy, happy family meal during Tet. The scene should show the family gathered around a table laden with traditional Tet holiday food like 'bánh chưng', 'giò', and 'dưa hành'. Everyone should look joyful and engaged in the meal.") },
+        { value: 'B', label: 'B - Bên nồi bánh chưng', description: 'Cooking Banh Chung together', textOverlay: 'Bên nồi bánh chưng', getPrompt: () => createFinalPrompt("The family is having fun cooking 'Bánh chưng' together. Place the family outdoors or in a traditional kitchen setting around a large, simmering pot. Show them laughing and working together, with stacks of 'lá dong' (phrynium leaves) and other ingredients nearby. The atmosphere should be warm and communal.") },
+        { value: 'Đ', label: 'Đ - Được chiều như tiên', description: 'A moment of happy affection', textOverlay: 'Được chiều như tiên', getPrompt: () => createFinalPrompt("Pure happiness and affection. Depict a parent (mother or father) playfully carrying their child (son or daughter) on their shoulders or lifting them up joyfully in their arms. Their expressions should be full of laughter and love. The background should be a beautiful Tet setting with peach blossoms.") },
+        { value: 'P', label: 'P - Phá mẹ là chính', description: 'A fun prank with mom', textOverlay: 'Phá mẹ là chính', getPrompt: () => createFinalPrompt("A lighthearted, playful moment between a child and their mother. Show the child playfully riding a broomstick like a hobby horse, pretending to be a wizard or knight, and playing a fun, harmless prank on their mom. His mother should be reacting with amusement and laughter. The scene should be funny, appropriate, and heartwarming, set within a home decorated for Tet.") },
+        { value: 'C', label: 'C - Chụp hình gia đình', description: 'A classic 90s family photo', textOverlay: 'Chụp hình gia đình', getPrompt: () => createFinalPrompt("A classic, traditional Vietnamese family picture from the 1990s. The family should be posed formally but happily. The background should be a typical 90s studio backdrop, perhaps with a painted landscape or ornate furniture. The image style should have a slightly vintage, nostalgic film feel with warm color tones.") },
+        { value: 'S', label: 'S - Song kiếm hợp bích', description: 'Mother and child cooking', textOverlay: 'Song kiếm hợp bích', getPrompt: () => createFinalPrompt("A mother and her son/daughter preparing a Tet meal together, symbolizing teamwork ('Song kiếm hợp bích'). Show them in the kitchen, happily collaborating on a dish. One could be chopping vegetables while the other stirs a pot. The atmosphere should be one of bonding and shared tradition.") },
+      ];
+
+      // --- SERVICES ---
+      const fileToGenerativePart = async (file) => {
+        const base64EncodedDataPromise = new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                  resolve(reader.result.split(',')[1]);
+              } else {
+                  resolve('');
+              }
+          };
+          reader.readAsDataURL(file);
+        });
+        return {
+          inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+        };
+      };
+
+      const generateImage = async (imageFile, prompt) => {
+        if (!process.env.API_KEY) {
+          throw new Error("API_KEY environment variable is not set.");
+        }
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const imagePart = await fileToGenerativePart(imageFile);
+        const textPart = { text: prompt };
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: {
+            parts: [imagePart, textPart],
+          },
+          config: {
+            responseModalities: [Modality.IMAGE],
+          },
+        });
+
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            return part.inlineData.data;
+          }
+        }
+
+        throw new Error("No image was generated by the API.");
+      };
+
+      // --- COMPONENTS ---
+
+      const Loader = () => {
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-center items-center z-50">
+            <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-white text-xl font-semibold">Generating your moment...</p>
+            <p className="text-white/80 mt-1">This may take a moment.</p>
+          </div>
+        );
+      };
+
+      const Header = () => {
+        return (
+          <header className="py-6 px-4 md:px-8">
+            <div className="container mx-auto flex justify-center items-center">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white drop-shadow-md">
+                Golden Tet Moment
+              </h1>
+            </div>
+          </header>
+        );
+      };
+
+      const ImageUploader = ({ onImageUpload, imageUrl }) => {
+        const fileInputRef = useRef(null);
+
+        const handleFileChange = (event) => {
+          const file = event.target.files?.[0];
+          if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
+            onImageUpload(file);
+          } else {
+            alert("Please select a valid image file (JPEG or PNG).");
+          }
+        };
+
+        const handleDrop = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const file = event.dataTransfer.files?.[0];
+           if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
+            onImageUpload(file);
+          } else {
+            alert("Please select a valid image file (JPEG or PNG).");
+          }
+        };
+
+        const handleDragOver = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        };
+
+        const handleClick = () => {
+          fileInputRef.current?.click();
+        };
+
+        return (
+          <div className="w-full">
+            <h3 className="text-xl font-semibold mb-3 text-center md:text-left">1. Upload Your Photo</h3>
+            <div
+              onClick={handleClick}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="relative w-full aspect-[4/5] bg-black/20 rounded-xl border-2 border-dashed border-white/50 flex flex-col justify-center items-center text-center p-4 cursor-pointer hover:bg-black/30 transition-colors"
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/png, image/jpeg"
+                className="hidden"
+              />
+              {imageUrl ? (
+                <img src={imageUrl} alt="Uploaded preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+              ) : (
+                <>
+                  <UploadIcon className="h-12 w-12 text-white/70 mb-2" />
+                  <p className="font-semibold">Click to upload or drag & drop</p>
+                  <p className="text-sm text-white/60">PNG or JPG. Parent & Child photo.</p>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      const LuckyLetterSelector = ({ letters, selectedLetter, onSelect }) => {
+        return (
+          <div className="w-full">
+            <h3 className="text-xl font-semibold mb-3 text-center md:text-left">2. Choose a Lucky Letter</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto pr-2">
+              {letters.map((letter) => (
+                <button
+                  key={letter.value}
+                  onClick={() => onSelect(letter)}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 aspect-square ${
+                    selectedLetter?.value === letter.value
+                      ? 'bg-yellow-400 border-yellow-400 text-blue-900 shadow-lg scale-105'
+                      : 'bg-white/10 border-white/30 hover:bg-white/20 hover:border-white/50'
+                  }`}
+                >
+                  <span className="font-bold text-5xl mb-2">{letter.value}</span>
+                  <span className="text-sm text-center font-medium leading-tight opacity-90">{letter.textOverlay}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const ResultDisplay = ({ generatedImage, textOverlay, onReset, onTryAgain }) => {
+        const imageContainerRef = useRef(null);
+
+        const handleDownload = useCallback(() => {
+          const canvas = document.createElement('canvas');
+          const image = new Image();
+          image.crossOrigin = 'anonymous';
+          image.src = generatedImage;
+
+          image.onload = () => {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            ctx.drawImage(image, 0, 0);
+
+            const fontSize = Math.floor(image.width / 15);
+            ctx.font = `bold ${fontSize}px Pacifico, cursive`;
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+            
+            ctx.fillText(textOverlay, canvas.width / 2, canvas.height - (fontSize / 2));
+
+            const link = document.createElement('a');
+            link.download = 'pepsi-tet-moment.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+          };
+        }, [generatedImage, textOverlay]);
+
+        return (
+          <div className="max-w-xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-6 text-yellow-300">Your Golden Moment is Here!</h2>
+            <div ref={imageContainerRef} className="relative aspect-[4/5] rounded-2xl shadow-2xl overflow-hidden mb-6">
+              <img src={generatedImage} alt="Generated Tet moment" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              <p className="font-pacifico absolute bottom-4 left-0 right-0 text-white text-4xl md:text-5xl text-shadow">
+                {textOverlay}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <button
+                onClick={handleDownload}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <DownloadIcon className="h-6 w-6" />
+                Download
+              </button>
+              <button
+                onClick={onTryAgain}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <BackIcon className="h-6 w-6" />
+                Try Different Letter
+              </button>
+              <button
+                onClick={onReset}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+              >
+                <RedoIcon className="h-6 w-6" />
+                Start Over
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // --- APP ---
+      const App = () => {
+        const [inputImage, setInputImage] = useState(null);
+        const [inputImageUrl, setInputImageUrl] = useState(null);
+        const [selectedLetter, setSelectedLetter] = useState(null);
+        const [generatedImage, setGeneratedImage] = useState(null);
+        const [isLoading, setIsLoading] = useState(false);
+        const [error, setError] = useState(null);
+
+        const handleImageUpload = (file) => {
+          setInputImage(file);
+          setInputImageUrl(URL.createObjectURL(file));
+          setGeneratedImage(null);
+        };
+
+        const handleLetterSelect = (letter) => {
+          setSelectedLetter(letter);
+        };
+        
+        const handleGenerate = useCallback(async () => {
+          if (!inputImage || !selectedLetter) {
+            setError('Please upload an image and select a lucky letter.');
+            return;
+          }
+
+          setIsLoading(true);
+          setError(null);
+          setGeneratedImage(null);
+
+          try {
+            const prompt = selectedLetter.getPrompt();
+            const generatedImageData = await generateImage(inputImage, prompt);
+            setGeneratedImage(`data:image/png;base64,${generatedImageData}`);
+          } catch (err) {
+            console.error(err);
+            setError('Failed to generate image. Please try again.');
+          } finally {
+            setIsLoading(false);
+          }
+        }, [inputImage, selectedLetter]);
+
+        const handleReset = () => {
+          // Full reset
+          setInputImage(null);
+          setInputImageUrl(null);
+          setSelectedLetter(null);
+          setGeneratedImage(null);
+          setError(null);
+          setIsLoading(false);
+        };
+
+        const handleTryAgain = () => {
+          // Soft reset - keep image, clear result and selection
+          setSelectedLetter(null);
+          setGeneratedImage(null);
+          setError(null);
+        };
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-700 to-red-600 text-white">
+            {isLoading && <Loader />}
+            <Header />
+            <main className="container mx-auto p-4 md:p-8">
+              {!generatedImage ? (
+                <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6 md:p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold text-center mb-6 text-yellow-300">Create Your Golden Tet Moment</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <ImageUploader onImageUpload={handleImageUpload} imageUrl={inputImageUrl} />
+                    <LuckyLetterSelector
+                      letters={LUCKY_LETTERS}
+                      selectedLetter={selectedLetter}
+                      onSelect={handleLetterSelect}
+                    />
+                  </div>
+
+                  {error && <p className="text-center text-red-400 mt-6">{error}</p>}
+                  
+                  <div className="mt-8 text-center">
+                    <button
+                      onClick={handleGenerate}
+                      disabled={!inputImage || !selectedLetter || isLoading}
+                      className="bg-yellow-400 hover:bg-yellow-500 disabled:bg-gray-500 disabled:cursor-not-allowed text-blue-900 font-bold py-3 px-12 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 text-xl"
+                    >
+                      Generate Moment
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <ResultDisplay
+                  generatedImage={generatedImage}
+                  textOverlay={selectedLetter?.textOverlay || ''}
+                  onReset={handleReset}
+                  onTryAgain={handleTryAgain}
+                />
+              )}
+            </main>
+            <footer className="text-center p-4 text-white/70 text-sm">
+              <p>&copy; {new Date().getFullYear()} PepsiCo. All rights reserved.</p>
+            </footer>
+          </div>
+        );
+      };
+
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    </script>
   </body>
 </html>
