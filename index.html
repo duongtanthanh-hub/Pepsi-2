@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pepsi Golden Tet Moment Generator</title>
+    <title>Pepsi Tet Golden Moment Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@400;500;700&display=swap');
@@ -30,10 +30,6 @@
 </script>
 <!-- Add Babel Standalone for in-browser JSX/TSX transpilation -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<!-- Safety polyfill with Hardcoded API Key -->
-<script>
-  window.process = { env: { API_KEY: 'AIzaSyBt-V_4mRTkMJJWeThwpZQCSmJP4bMb1io' } };
-</script>
 </head>
   <body class="bg-gray-100">
     <div id="root"></div>
@@ -43,6 +39,9 @@
       import React, { useState, useCallback, useRef } from 'react';
       import ReactDOM from 'react-dom/client';
       import { GoogleGenAI, Modality } from "@google/genai";
+
+      // HARDCODED API KEY
+      const API_KEY = 'AIzaSyBt-V_4mRTkMJJWeThwpZQCSmJP4bMb1io';
 
       // --- ICONS ---
       const PepsiLogoIcon = (props) => (
@@ -78,25 +77,27 @@
       );
 
       // --- CONSTANTS & PROMPTS ---
-      const createFinalPrompt = (theme) => {
-        return `Generate a realistic, real-life style photograph of the two people (parent and child) from the provided image.
-      **CRITICAL PRIORITY: Preserve the exact facial features and identities of the subjects. Their faces MUST remain clearly visible, well-lit, and unobstructed. Do not cover faces with masks, shadows, or heavy effects.**
-      The scene's theme is: "${theme}".
+      const createFinalPrompt = (theme, textOverlay) => {
+        return `Generate a hyper-realistic, high-quality, real-life photograph of the people from the provided image.
+      
+      **STRICT RULES:**
+      1. **NUMBER OF PEOPLE**: The output image MUST contain EXACTLY the same number of people as the input image. Count the people in the input and generate exactly that many in the output. Do not add or remove people.
+      2. **IDENTITY & FACES**: You MUST preserve the exact facial features and identities of the subjects. Their faces MUST remain clearly visible, well-lit, and look exactly like the original people. Do not use generic faces.
+      3. **REALISM**: The style must be 100% photorealistic. It should look like a photo taken with a high-end camera (DSLR). Realistic skin texture, lighting, and depth. No artistic, cartoon, or illustration styles.
+      4. **THEME**: ${theme}
+      5. **BRANDING**: You MUST include a Pepsi can or bottle in the scene. It should be naturally placed (e.g., on a table, held in hand) and look like a real object in the environment.
+      
       The overall mood should be happy, warm, and celebratory, fitting for the Vietnamese Tet holiday.
-      The style must be photorealistic, as if taken with a modern camera.
-      **MANDATORY REQUIREMENT: You MUST include a Pepsi can or bottle in the scene. It should be clearly visible, naturally placed (e.g., on a table or being held), and look like a natural part of the celebration.**
-      Do not add any text overlays, watermarks, or logos to the image itself.
-      The output image must have the same number of people as the input image (two people: one parent, one child).
-      Ensure the final image is high quality and resolution.`;
+      Do not add any text overlays, watermarks, or logos to the image itself.`;
       };
 
       const LUCKY_LETTERS = [
-        { value: 'T', label: 'T - Thêm nữa đi con', description: 'A cozy family meal', textOverlay: 'Thêm nữa đi con', getPrompt: () => createFinalPrompt("A cozy, happy family meal during Tet. The scene should show the family gathered around a table laden with traditional Tet holiday food like 'bánh chưng', 'giò', and 'dưa hành'. Everyone should look joyful and engaged in the meal.") },
-        { value: 'B', label: 'B - Bên nồi bánh chưng', description: 'Cooking Banh Chung together', textOverlay: 'Bên nồi bánh chưng', getPrompt: () => createFinalPrompt("The family is having fun cooking 'Bánh chưng' together. Place the family outdoors or in a traditional kitchen setting around a large, simmering pot. Show them laughing and working together, with stacks of 'lá dong' (phrynium leaves) and other ingredients nearby. The atmosphere should be warm and communal.") },
-        { value: 'Đ', label: 'Đ - Được chiều như tiên', description: 'A moment of happy affection', textOverlay: 'Được chiều như tiên', getPrompt: () => createFinalPrompt("Pure happiness and affection. Depict a parent (mother or father) playfully carrying their child (son or daughter) on their shoulders or lifting them up joyfully in their arms. Their expressions should be full of laughter and love. The background should be a beautiful Tet setting with peach blossoms.") },
-        { value: 'P', label: 'P - Phá mẹ là chính', description: 'A fun prank with mom', textOverlay: 'Phá mẹ là chính', getPrompt: () => createFinalPrompt("A lighthearted, playful moment between a child and their mother. Show the child playfully riding a broomstick like a hobby horse, pretending to be a wizard or knight, and playing a fun, harmless prank on their mom. His mother should be reacting with amusement and laughter. The scene should be funny, appropriate, and heartwarming, set within a home decorated for Tet.") },
-        { value: 'C', label: 'C - Chụp hình gia đình', description: 'A classic 90s family photo', textOverlay: 'Chụp hình gia đình', getPrompt: () => createFinalPrompt("A classic, traditional Vietnamese family picture from the 1990s. The family should be posed formally but happily. The background should be a typical 90s studio backdrop, perhaps with a painted landscape or ornate furniture. The image style should have a slightly vintage, nostalgic film feel with warm color tones.") },
-        { value: 'S', label: 'S - Song kiếm hợp bích', description: 'Mother and child cooking', textOverlay: 'Song kiếm hợp bích', getPrompt: () => createFinalPrompt("A mother and her son/daughter preparing a Tet meal together, symbolizing teamwork ('Song kiếm hợp bích'). Show them in the kitchen, happily collaborating on a dish. One could be chopping vegetables while the other stirs a pot. The atmosphere should be one of bonding and shared tradition.") },
+        { value: 'T', label: 'T - Thêm nữa đi con', description: 'A cozy family meal', textOverlay: 'Thêm nữa đi con', getPrompt: () => createFinalPrompt("The theme is a cozy, happy family meal during Tet. The scene should show the family gathered around a table laden with traditional Tet holiday food like 'bánh chưng', 'giò', and 'dưa hành'. Everyone should look joyful and engaged in the meal.", 'Thêm nữa đi con') },
+        { value: 'B', label: 'B - Bên nồi bánh chưng', description: 'Cooking Banh Chung together', textOverlay: 'Bên nồi bánh chưng', getPrompt: () => createFinalPrompt("The theme is the family having fun cooking 'Bánh chưng' together. Place the family outdoors or in a traditional kitchen setting around a large, simmering pot. Show them laughing and working together, with stacks of 'lá dong' (phrynium leaves) and other ingredients nearby. The atmosphere should be warm and communal.", 'Bên nồi bánh chưng') },
+        { value: 'Đ', label: 'Đ - Được chiều như vong', description: 'A moment of happy affection', textOverlay: 'Được chiều như vong', getPrompt: () => createFinalPrompt("The theme is pure happiness and affection. Depict a parent (mother or father) playfully carrying their child (son or daughter) on their shoulders or lifting them up joyfully in their arms. Their expressions should be full of laughter and love. The background should be a beautiful Tet setting with peach blossoms.", 'Được chiều như vong') },
+        { value: 'P', label: 'P - Phá mẹ là chính', description: 'A fun prank with mom', textOverlay: 'Phá mẹ là chính', getPrompt: () => createFinalPrompt("The theme is a lighthearted, playful moment between a son and his mother. Show the son playfully riding a broomstick like a hobby horse, pretending to be a wizard or knight, and playing a fun, harmless prank on his mom. His mother should be reacting with amusement and laughter. The scene should be funny, appropriate, and heartwarming, set within a home decorated for Tet.", 'Phá mẹ là chính') },
+        { value: 'C', label: 'C - Chụp hình gia đình', description: 'A classic 90s family photo', textOverlay: 'Chụp hình gia đình', getPrompt: () => createFinalPrompt("The theme is a classic, traditional Vietnamese family picture from the 1990s. The family should be posed formally but happily. The background should be a typical 90s studio backdrop, perhaps with a painted landscape or ornate furniture. The image style should have a slightly vintage, nostalgic film feel with warm color tones.", 'Chụp hình gia đình') },
+        { value: 'S', label: 'S - Song kiếm hợp bích', description: 'Mother and child cooking', textOverlay: 'Song kiếm hợp bích', getPrompt: () => createFinalPrompt("The theme is a mother and her son/daughter preparing a Tet meal together, symbolizing teamwork ('Song kiếm hợp bích'). Show them in the kitchen, happily collaborating on a dish. One could be chopping vegetables while the other stirs a pot. The atmosphere should be one of bonding and shared tradition.", 'Song kiếm hợp bích') },
       ];
 
       // --- SERVICES ---
@@ -118,10 +119,10 @@
       };
 
       const generateImage = async (imageFile, prompt) => {
-        if (!process.env.API_KEY) {
-          throw new Error("API_KEY environment variable is not set.");
+        if (!API_KEY) {
+          throw new Error("API_KEY is not set.");
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         
         const imagePart = await fileToGenerativePart(imageFile);
         const textPart = { text: prompt };
@@ -162,7 +163,7 @@
           <header className="py-6 px-4 md:px-8">
             <div className="container mx-auto flex justify-center items-center">
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white drop-shadow-md">
-                Golden Tet Moment
+                Pepsi Tet Golden Moment Generator
               </h1>
             </div>
           </header>
