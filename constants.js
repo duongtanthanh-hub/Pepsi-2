@@ -4,7 +4,7 @@ const createFinalPrompt = (theme) => {
 The scene's theme is: "${theme}".
 The overall mood should be happy, warm, and celebratory, fitting for the Vietnamese Tet holiday.
 The style must be photorealistic, as if taken with a modern camera.
-Please subtly and naturally include a Pepsi can or bottle in the scene, making it look like a part of the celebration.
+**MANDATORY REQUIREMENT: You MUST include a Pepsi can or bottle in the scene. It should be clearly visible, naturally placed (e.g., on a table or being held), and look like a natural part of the celebration.**
 Do not add any text overlays, watermarks, or logos to the image itself.
 The output image must have the same number of people as the input image (two people: one parent, one child).
 Ensure the final image is high quality and resolution.`;
