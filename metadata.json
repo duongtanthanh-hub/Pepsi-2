@@ -1,0 +1,5 @@
+{
+  "name": "[working] Pepsi Golden Tet Moment Generator",
+  "description": "An application that generates a personalized 'golden Tet moment' photo for your brand, Pepsi. Users upload a photo of two people, select a lucky letter theme, and receive a new, realistic photo featuring a Pepsi product, the original faces, and a thematic text overlay.",
+  "requestFramePermissions": []
+}
